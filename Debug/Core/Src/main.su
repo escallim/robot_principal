@@ -1,0 +1,12 @@
+main.cpp:79:6:void envoieRaspberry()	16	static
+main.cpp:85:6:void log()	8	static
+main.cpp:96:5:int main()	24	static
+main.cpp:184:6:void SystemClock_Config()	88	static
+main.cpp:228:13:void MX_I2C1_Init()	8	static
+main.cpp:262:13:void MX_USART1_UART_Init()	8	static
+main.cpp:295:13:void MX_USART2_UART_Init()	8	static
+main.cpp:328:13:void MX_USART6_UART_Init()	8	static
+main.cpp:361:13:void MX_GPIO_Init()	48	static
+main.cpp:397:6:void Error_Handler()	4	static
+main.cpp:403:1:void __static_initialization_and_destruction_0(int, int)	16	static
+main.cpp:403:1:cpp)	8	static
