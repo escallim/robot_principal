@@ -16,5 +16,5 @@ pos_t robot_t::get_pos()
 
 void robot_t::send_pos()
 {
-	//printf("1 %d %d %d\n", pos.x, pos.y, pos.angle);
+	printf("1 %d %d\n", pos.x, pos.y);
 }

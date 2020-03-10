@@ -1,3 +1,0 @@
-TCA9448A.cpp:12:1:TCA9548A::TCA9548A(I2C_HandleTypeDef&, uint8_t)	24	static
-TCA9448A.cpp:17:6:void TCA9548A::select(uint8_t)	32	static
-TCA9448A.cpp:29:6:void TCA9548A::reset()	16	static

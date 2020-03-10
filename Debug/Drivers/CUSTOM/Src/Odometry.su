@@ -1,3 +1,0 @@
-Odometry.h:8:2:pos_t::pos_t(uint16_t, uint16_t, uint16_t)	24	static
-Odometry.cpp:6:1:robot_t::robot_t(uint16_t, uint16_t, uint16_t)	24	static
-Odometry.cpp:12:7:pos_t robot_t::get_pos()	16	static

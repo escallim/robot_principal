@@ -95,37 +95,37 @@ uint8_t MCP233::read_(void){
 
 void MCP233::drive_forward_M1(int speed){
     do {
-        write_(0,speed,false,false);
+		send_packet(3,_ID,0,speed);
     } while( read_() != 0xFF);
 }
 
 void MCP233::drive_backward_M1(int speed){
     do {
-        write_(1,speed,false,false);
+        send_packet(3,_ID,1,speed);
     } while( read_() != 0xFF);
 }
 
 void MCP233::drive_forward_M2(int speed){
     do {
-        write_(4,speed,false,false);
+        send_packet(3,_ID,4,speed);
     } while( read_() != 0xFF);
 }
 
 void MCP233::drive_backward_M2(int speed){
     do {
-        write_(5,speed,false,false);
+    	send_packet(3,_ID,5,speed);
     } while( read_() != 0xFF);
 }
 
 void MCP233::drive_forward(int speed){
     do {
-        write_(8,speed,false,false);
+    	send_packet(3,_ID,8,speed);
     } while( read_() != 0xFF);
 }
 
 void MCP233::drive_backward(int speed){
     do {
-        write_(9,speed,false,false);
+    	send_packet(3,_ID,9,speed);
     } while( read_() != 0xFF);
 }
 
