@@ -12,30 +12,16 @@ struct pos_t
 	uint16_t angle;
 };
 
-enum r_etat_t
-{
-	WAITING,
-	BUSY,
-	BLOCKED
-};
 
-enum r_mode_t
-{
-	MANUAL,
-	AUTOMATIC
-};
-
-class robot_t
+class odometry_t
 {
 public:
-	robot_t(uint16_t x=0, uint16_t y=0, uint16_t angle=0);
+	odometry_t(uint16_t x=0, uint16_t y=0, uint16_t angle=0);
 
 	pos_t get_pos();
 	void send_pos();
 private:
 	pos_t pos;
-	r_etat_t etat;
-	r_mode_t mode;
 };
 
 

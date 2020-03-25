@@ -29,6 +29,8 @@
 #include "MCP233.h"
 #include "VL53L0X.h"
 #include "TCA9548A.h"
+
+#include "Robot.h"
 #include "Odometry.h"
 
 #include "commandes.h"
@@ -47,6 +49,8 @@
 
 #define NB_CAPTEUR_TOF 2
 
+#define LOG(f_, ...) printf((f_), ##__VA_ARGS__)
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,8 +66,9 @@ UART_HandleTypeDef huart6;
 
 /* USER CODE BEGIN PV */
 
-robot_t r;
-	MCP233 mcp(128, huart6);
+robot_t robot;
+odometry_t odo;
+MCP233 mcp(128, huart6);
 
 /* USER CODE END PV */
 
@@ -80,6 +85,96 @@ static void MX_USART6_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t rx_buffer[RX_SIZE];
+
+
+int __io_putchar(int ch)
+{
+	uint8_t c = ch & 0x00FF;
+	HAL_UART_Transmit(&huart2, &c, 1, 10);
+	return ch;
+}
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin == demarrage_Pin)
+	{
+		LOG("0 Interruption demarrage\n");
+		robot.transition(START);
+	}
+
+	if(GPIO_Pin == couleur_Pin)
+	{
+		LOG("0 Interruption couleur\n");
+		//TODO ENVOYER COTE
+		robot.transition(TEAM_COLOR_CHANGE);
+	}
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	printf("%s",rx_buffer);
+
+	switch( rx_buffer[0] )
+	{
+	case CMD_START:
+		printf("CMD_START\n");
+		robot.transition(START);
+		break;
+	case CMD_STOP:
+		printf("CMD_STOP\n");
+		robot.transition(STOP);
+		//TODO ENLEVER COMMANDE ICI
+		mcp.drive_forward(0);
+		break;
+	case MODE_AUTO:
+		printf("MODE_AUTO\n");
+		robot.transition(SUPERVISOR_CMD_AUTO);
+		break;
+	case MODE_MANUAL:
+		printf("MODE_MANUAL\n");
+		robot.transition(SUPERVISOR_CMD_MANU);
+		break;
+	case MOVE_HALT:
+		printf("MOVE_HALT\n");
+		mcp.drive_forward_M1(0);
+		mcp.drive_forward_M2(0);
+		break;
+	case MOVE_GO_FORWARD:
+		printf("MOVE_GO_FORWARD\n");
+		mcp.drive_forward(24);
+		break;
+	case MOVE_GO_BACKWARD:
+		printf("MOVE_GO_BACKWARD\n");
+		mcp.drive_backward(24);
+		break;
+	case MOVE_TURN_LEFT:
+		printf("MOVE_TURN_LEFT\n");
+		mcp.drive_forward_M1(8);
+		mcp.drive_backward_M2(8);
+		break;
+	case MOVE_TURN_RIGHT:
+		printf("MOVE_TURN_RIGHT\n");
+		mcp.drive_backward_M1(8);
+		mcp.drive_forward_M2(8);
+		break;
+	case POS_ASK:
+		printf("POS_ASK\n");
+		odo.send_pos();
+		break;
+	default:
+		printf("GROSSE_MERDE\n");
+		break;
+	}
+	HAL_UART_Receive_IT(&huart2, rx_buffer, RX_SIZE);
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	__NOP();
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -88,9 +183,7 @@ uint8_t rx_buffer[RX_SIZE];
  */
 int main(void) {
 	/* USER CODE BEGIN 1 */
-	setvbuf(stdin, NULL, _IONBF, 0);
-	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(stderr, NULL, _IONBF, 0);
+
 	/* USER CODE END 1 */
 
 	/* MCU Configuration--------------------------------------------------------*/
@@ -133,7 +226,10 @@ int main(void) {
 		tof_sensor[i]->startContinuous();
 	}
 */
-
+	while(robot.get_state() == IDLE)
+	{
+		HAL_Delay(50);
+	}
 
 	HAL_Delay(100);
 
@@ -333,11 +429,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
+  /*Configure GPIO pin : demarrage_Pin */
+  GPIO_InitStruct.Pin = demarrage_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(demarrage_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
@@ -346,67 +442,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : couleur_Pin */
+  GPIO_InitStruct.Pin = couleur_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(couleur_GPIO_Port, &GPIO_InitStruct);
+
 }
 
 /* USER CODE BEGIN 4 */
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	printf("%s",rx_buffer);
-
-	switch( rx_buffer[0] )
-	{
-	case CMD_START:
-		printf("CMD_START\n");
-		break;
-	case CMD_STOP:
-		printf("CMD_STOP\n");
-		mcp.drive_forward(0);
-		break;
-	case MODE_AUTO:
-		printf("MODE_AUTO\n");
-		break;
-	case MODE_MANUAL:
-		printf("MODE_MANUAL\n");
-		break;
-	case MOVE_HALT:
-		printf("MOVE_HALT\n");
-		mcp.drive_forward_M1(0);
-		mcp.drive_forward_M2(0);
-		break;
-	case MOVE_GO_FORWARD:
-		printf("MOVE_GO_FORWARD\n");
-		mcp.drive_forward(24);
-		break;
-	case MOVE_GO_BACKWARD:
-		printf("MOVE_GO_BACKWARD\n");
-		mcp.drive_backward(24);
-		break;
-	case MOVE_TURN_LEFT:
-		printf("MOVE_TURN_LEFT\n");
-		mcp.drive_forward_M1(8);
-		mcp.drive_backward_M2(8);
-		break;
-	case MOVE_TURN_RIGHT:
-		printf("MOVE_TURN_RIGHT\n");
-		mcp.drive_backward_M1(8);
-		mcp.drive_forward_M2(8);
-		break;
-	case POS_ASK:
-		printf("POS_ASK\n");
-		r.send_pos();
-		break;
-	default:
-		printf("GROSSE_MERDE\n");
-		break;
-	}
-	HAL_UART_Receive_IT(&huart2, rx_buffer, RX_SIZE);
-}
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-	__NOP();
-}
 
 /* USER CODE END 4 */
 
