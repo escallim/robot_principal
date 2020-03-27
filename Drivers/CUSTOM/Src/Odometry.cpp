@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-odometry_t::odometry_t(uint16_t x, uint16_t y, uint16_t angle): pos(x,y,angle)
+odometry_t::odometry_t(MCP233 controller, double wheel_1_diameter, double wheel_2_diameter, double entraxe, uint16_t x, uint16_t y, uint16_t angle): mcp{controller}, config_meca{wheel_1_diameter, wheel_2_diameter, entraxe}, pos(x,y,angle)
 {
 }
 

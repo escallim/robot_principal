@@ -47,6 +47,9 @@
 */
 
 /* Includes */
+
+#include "main.h"
+
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -60,7 +63,16 @@
 /* Variables */
 //#undef errno
 extern int errno;
-extern int __io_putchar(int ch) __attribute__((weak));
+
+extern UART_HandleTypeDef huart2;
+
+int __io_putchar(int ch)
+{
+	uint8_t c = ch & 0x00FF;
+	HAL_UART_Transmit(&huart2, &c, 1, 10);
+	return ch;
+}
+
 extern int __io_getchar(void) __attribute__((weak));
 
 register char * stack_ptr asm("sp");

@@ -30,8 +30,9 @@
 #include "VL53L0X.h"
 #include "TCA9548A.h"
 
-#include "Robot.h"
 #include "Odometry.h"
+
+#include "Robot.h"
 
 #include "commandes.h"
 
@@ -48,6 +49,12 @@
 /* USER CODE BEGIN PD */
 
 #define NB_CAPTEUR_TOF 2
+#define MATCH_DURATION 100
+
+#define WHEEL_1_DIAMETER 87.5
+#define WHEEL_2_DIAMETER 89.0
+#define ENTRAXE 276.0
+
 
 #define LOG(f_, ...) printf((f_), ##__VA_ARGS__)
 
@@ -66,9 +73,12 @@ UART_HandleTypeDef huart6;
 
 /* USER CODE BEGIN PV */
 
-robot_t robot;
-odometry_t odo;
-MCP233 mcp(128, huart6);
+MCP233 controller(128, huart6);
+
+odometry_t odometry(controller, WHEEL_1_DIAMETER, WHEEL_2_DIAMETER, ENTRAXE);
+
+robot_t robot(controller,odometry);
+
 
 /* USER CODE END PV */
 
@@ -86,28 +96,16 @@ static void MX_USART6_UART_Init(void);
 /* USER CODE BEGIN 0 */
 uint8_t rx_buffer[RX_SIZE];
 
-
-int __io_putchar(int ch)
-{
-	uint8_t c = ch & 0x00FF;
-	HAL_UART_Transmit(&huart2, &c, 1, 10);
-	return ch;
-}
-
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if(GPIO_Pin == demarrage_Pin)
 	{
-		LOG("0 Interruption demarrage\n");
-		robot.transition(START);
+		robot.event(robot_event_t::START);
 	}
 
 	if(GPIO_Pin == couleur_Pin)
 	{
-		LOG("0 Interruption couleur\n");
-		//TODO ENVOYER COTE
-		robot.transition(TEAM_COLOR_CHANGE);
+		robot.event(robot_event_t::TEAM_COLOR_CHANGE);
 	}
 }
 
@@ -118,49 +116,44 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	switch( rx_buffer[0] )
 	{
 	case CMD_START:
-		printf("CMD_START\n");
-		robot.transition(START);
+		robot.event(robot_event_t::START);
 		break;
+
 	case CMD_STOP:
-		printf("CMD_STOP\n");
-		robot.transition(STOP);
-		//TODO ENLEVER COMMANDE ICI
-		mcp.drive_forward(0);
+		robot.event(robot_event_t::STOP);
 		break;
+
 	case MODE_AUTO:
-		printf("MODE_AUTO\n");
-		robot.transition(SUPERVISOR_CMD_AUTO);
+		robot.event(robot_event_t::SUPERVISOR_CMD_AUTO);
 		break;
+
 	case MODE_MANUAL:
-		printf("MODE_MANUAL\n");
-		robot.transition(SUPERVISOR_CMD_MANU);
+		robot.event(robot_event_t::SUPERVISOR_CMD_MANU);
 		break;
+
 	case MOVE_HALT:
-		printf("MOVE_HALT\n");
-		mcp.drive_forward_M1(0);
-		mcp.drive_forward_M2(0);
+		robot.cmd(robot_cmd_t::HALT);
 		break;
+
 	case MOVE_GO_FORWARD:
-		printf("MOVE_GO_FORWARD\n");
-		mcp.drive_forward(24);
+		robot.cmd(robot_cmd_t::GO_FORWARD);
 		break;
+
 	case MOVE_GO_BACKWARD:
-		printf("MOVE_GO_BACKWARD\n");
-		mcp.drive_backward(24);
+		robot.cmd(robot_cmd_t::GO_BACKWARD);
 		break;
+
 	case MOVE_TURN_LEFT:
-		printf("MOVE_TURN_LEFT\n");
-		mcp.drive_forward_M1(8);
-		mcp.drive_backward_M2(8);
+		robot.cmd(robot_cmd_t::TURN_LEFT);
 		break;
+
 	case MOVE_TURN_RIGHT:
-		printf("MOVE_TURN_RIGHT\n");
-		mcp.drive_backward_M1(8);
-		mcp.drive_forward_M2(8);
+		robot.cmd(robot_cmd_t::TURN_RIGHT);
+
 		break;
 	case POS_ASK:
 		printf("POS_ASK\n");
-		odo.send_pos();
+		odometry.send_pos();
 		break;
 	default:
 		printf("GROSSE_MERDE\n");
@@ -174,6 +167,17 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	__NOP();
 }
 
+void robot_inc_timer()
+{
+	if(robot.get_state() == robot_state_t::AUTOMATIC)
+	{
+		robot.inc_timer();
+		if(robot.get_timer() == MATCH_DURATION)
+		{
+			robot.event(robot_event_t::STOP);
+		}
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -226,16 +230,19 @@ int main(void) {
 		tof_sensor[i]->startContinuous();
 	}
 */
-	while(robot.get_state() == IDLE)
+	printf("debut\n");
+
+	printf("j'attend\n");
+	while(robot.get_state() == robot_state_t::IDLE)
 	{
-		HAL_Delay(50);
+		HAL_Delay(100);
 	}
 
 	HAL_Delay(100);
 
-	printf("debut\n");
+	printf("c'est partit\n");
 
-	mcp.reset_encoder_counts();
+	controller.reset_encoder_counts();
 
 	/* USER CODE END 2 */
 
@@ -260,8 +267,8 @@ int main(void) {
 
 		HAL_Delay(100);*/
 
-		int32_t enc1 = mcp.read_encoder_count_M1();
-		int32_t enc2 = mcp.read_encoder_count_M2();
+		int32_t enc1 = controller.read_encoder_count_M1();
+		int32_t enc2 = controller.read_encoder_count_M2();
 		printf("\r\t%6ld | %6ld  ", enc1, enc2);
 		HAL_Delay(1000);
 	}
@@ -447,6 +454,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(couleur_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 
