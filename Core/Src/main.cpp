@@ -254,7 +254,7 @@ int main(void) {
 	//controller.drive_forward(0);
 	//printf("reset moteur\n");
 
-	HAL_Delay(500);
+	HAL_Delay(400);
 
 	controller.drive_speed_accel_deccel_position(1024,1024, 1024,1024, 1024, 1024, 4096, 4096, 0);
 	printf("commande\n");
