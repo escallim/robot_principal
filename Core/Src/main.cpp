@@ -55,6 +55,12 @@
 #define WHEEL_2_DIAMETER 89.0
 #define ENTRAXE 276.0
 
+// entre les roue 126.5 encodeur 259.3
+
+
+
+#define TICK_PAR_TOUR 4096
+
 
 #define LOG(f_, ...) printf((f_), ##__VA_ARGS__)
 
@@ -75,7 +81,7 @@ UART_HandleTypeDef huart6;
 
 MCP233 controller(128, huart6);
 
-odometry_t odometry(controller, WHEEL_1_DIAMETER, WHEEL_2_DIAMETER, ENTRAXE);
+odometry_t odometry(controller, WHEEL_1_DIAMETER, WHEEL_2_DIAMETER, TICK_PAR_TOUR, ENTRAXE);
 
 robot_t robot(controller,odometry);
 
@@ -243,6 +249,15 @@ int main(void) {
 	printf("c'est partit\n");
 
 	controller.reset_encoder_counts();
+	printf("reset enc\n");
+
+	//controller.drive_forward(0);
+	//printf("reset moteur\n");
+
+	HAL_Delay(500);
+
+	controller.drive_speed_accel_deccel_position(1024,1024, 1024,1024, 1024, 1024, 4096, 4096, 0);
+	printf("commande\n");
 
 	/* USER CODE END 2 */
 
@@ -269,8 +284,8 @@ int main(void) {
 
 		int32_t enc1 = controller.read_encoder_count_M1();
 		int32_t enc2 = controller.read_encoder_count_M2();
-		printf("\r\t%6ld | %6ld  ", enc1, enc2);
-		HAL_Delay(1000);
+		printf("\t%6ld | %6ld  \n", enc1, enc2);
+		HAL_Delay(100);
 	}
 	/* USER CODE END 3 */
 }
