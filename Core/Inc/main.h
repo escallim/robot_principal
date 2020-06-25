@@ -53,10 +53,9 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
-void robot_inc_timer();
-
 /* USER CODE BEGIN EFP */
 void envoieRaspberry();
+void robot_inc_timer();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
