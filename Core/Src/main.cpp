@@ -1,68 +1,39 @@
 /* USER CODE BEGIN Header */
 /**
- ******************************************************************************
- * @file           : main.c
- * @brief          : Main program body
- ******************************************************************************
- * @attention
- *
- * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
- * All rights reserved.</center></h2>
- *
- * This software component is licensed by ST under BSD 3-Clause license,
- * the "License"; You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *                        opensource.org/licenses/BSD-3-Clause
- *
- ******************************************************************************
- */
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.</center></h2>
+  *
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
+  *
+  ******************************************************************************
+  */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
-#include <stdio.h>
-
-#include "MCP233.h"
-#include "VL53L0X.h"
-#include "TCA9548A.h"
-
-#include "Odometry.h"
-
-#include "Robot.h"
-
-#include "commandes.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-#define RX_SIZE 2
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
-#define NB_CAPTEUR_TOF 2
-#define MATCH_DURATION 100
-
-#define WHEEL_1_DIAMETER 87.5
-#define WHEEL_2_DIAMETER 89.0
-#define ENTRAXE 276.0
-
-// entre les roue 126.5 encodeur 259.3
-
-
-
-#define TICK_PAR_TOUR 4096
-
-
-#define LOG(f_, ...) printf((f_), ##__VA_ARGS__)
 
 /* USER CODE END PD */
 
@@ -77,14 +48,8 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart6;
 
+osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
-
-MCP233 controller(128, huart6);
-
-odometry_t odometry(controller, WHEEL_1_DIAMETER, WHEEL_2_DIAMETER, TICK_PAR_TOUR, ENTRAXE);
-
-robot_t robot(controller,odometry);
-
 
 /* USER CODE END PV */
 
@@ -94,200 +59,92 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
+void StartDefaultTask(void const * argument);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t rx_buffer[RX_SIZE];
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	if(GPIO_Pin == demarrage_Pin)
-	{
-		robot.event(robot_event_t::START);
-	}
-
-	if(GPIO_Pin == couleur_Pin)
-	{
-		robot.event(robot_event_t::TEAM_COLOR_CHANGE);
-	}
-}
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	printf("%s",rx_buffer);
-
-	switch( rx_buffer[0] )
-	{
-	case CMD_START:
-		robot.event(robot_event_t::START);
-		break;
-
-	case CMD_STOP:
-		robot.event(robot_event_t::STOP);
-		break;
-
-	case MODE_AUTO:
-		robot.event(robot_event_t::SUPERVISOR_CMD_AUTO);
-		break;
-
-	case MODE_MANUAL:
-		robot.event(robot_event_t::SUPERVISOR_CMD_MANU);
-		break;
-
-	case MOVE_HALT:
-		robot.cmd(robot_cmd_t::HALT);
-		break;
-
-	case MOVE_GO_FORWARD:
-		robot.cmd(robot_cmd_t::GO_FORWARD);
-		break;
-
-	case MOVE_GO_BACKWARD:
-		robot.cmd(robot_cmd_t::GO_BACKWARD);
-		break;
-
-	case MOVE_TURN_LEFT:
-		robot.cmd(robot_cmd_t::TURN_LEFT);
-		break;
-
-	case MOVE_TURN_RIGHT:
-		robot.cmd(robot_cmd_t::TURN_RIGHT);
-
-		break;
-	case POS_ASK:
-		printf("POS_ASK\n");
-		odometry.send_pos();
-		break;
-	default:
-		printf("GROSSE_MERDE\n");
-		break;
-	}
-	HAL_UART_Receive_IT(&huart2, rx_buffer, RX_SIZE);
-}
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-	__NOP();
-}
-
-void robot_inc_timer()
-{
-	if(robot.get_state() == robot_state_t::AUTOMATIC)
-	{
-		robot.inc_timer();
-		if(robot.get_timer() == MATCH_DURATION)
-		{
-			robot.event(robot_event_t::STOP);
-		}
-	}
-}
 
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
-int main(void) {
-	/* USER CODE BEGIN 1 */
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
-
-	/* MCU Configuration--------------------------------------------------------*/
-
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
-
-	/* USER CODE BEGIN Init */
-
-	/* USER CODE END Init */
-
-	/* Configure the system clock */
-	SystemClock_Config();
-
-	/* USER CODE BEGIN SysInit */
-
-	/* USER CODE END SysInit */
-
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_I2C1_Init();
-	MX_USART2_UART_Init();
-	MX_USART6_UART_Init();
-
-	/* USER CODE BEGIN 2 */
-	HAL_UART_Receive_IT(&huart2, rx_buffer, RX_SIZE);
+  /* USER CODE END 1 */
 
 
-/*
-	TCA9548A mux(hi2c1);
+  /* MCU Configuration--------------------------------------------------------*/
 
-	VL53L0X *tof_sensor[NB_CAPTEUR_TOF];
-	uint16_t tof_dist[NB_CAPTEUR_TOF];
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	// Initialisation
-	for (int i = 0; i < NB_CAPTEUR_TOF; i++) {
-		mux.select(i);
-		tof_sensor[i] = new VL53L0X(hi2c1);
-		tof_sensor[i]->init();
-		tof_sensor[i]->startContinuous();
-	}
-*/
-	printf("debut\n");
+  /* USER CODE BEGIN Init */
 
-	printf("j'attend\n");
-	while(robot.get_state() == robot_state_t::IDLE)
-	{
-		HAL_Delay(100);
-	}
+  /* USER CODE END Init */
 
-	HAL_Delay(100);
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	printf("c'est partit\n");
+  /* USER CODE BEGIN SysInit */
 
-	controller.reset_encoder_counts();
-	printf("reset enc\n");
+  /* USER CODE END SysInit */
 
-	//controller.drive_forward(0);
-	//printf("reset moteur\n");
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_I2C1_Init();
+  MX_USART2_UART_Init();
+  MX_USART6_UART_Init();
+  /* USER CODE BEGIN 2 */
 
-	HAL_Delay(400);
+  /* USER CODE END 2 */
 
-	controller.drive_speed_accel_deccel_position(1024,1024, 1024,1024, 1024, 1024, 4096, 4096, 0);
-	printf("commande\n");
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
 
-	/* USER CODE END 2 */
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
-	while (1) {
-		/* USER CODE END WHILE */
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
 
-		/* USER CODE BEGIN 3 */
-		/*
-		// Mesure
-		for (int i = 0; i < NB_CAPTEUR_TOF; i++) {
-			mux.select(i);
-			tof_dist[i] = tof_sensor[i]->readRangeContinuousMillimeters();
-		}
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
 
-		// Affichage
-		printf("\n");
-		for (int i = 0; i < NB_CAPTEUR_TOF; i++) {
-			printf("S%i: %4d\t", i, tof_dist[i]);
-		}
+  /* Create the thread(s) */
+  /* definition and creation of defaultTask */
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
-		HAL_Delay(100);*/
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
 
-		int32_t enc1 = controller.read_encoder_count_M1();
-		int32_t enc2 = controller.read_encoder_count_M2();
-		printf("\t%6ld | %6ld  \n", enc1, enc2);
-		HAL_Delay(100);
-	}
-	/* USER CODE END 3 */
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
 }
 
 /**
@@ -471,10 +328,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(couleur_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
@@ -482,6 +339,45 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+__weak void StartDefaultTask(void const * argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END 5 */
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM2 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM2) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
