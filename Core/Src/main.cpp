@@ -49,6 +49,7 @@ UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart6;
 
 osThreadId defaultTaskHandle;
+osThreadId commandTaskHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -60,6 +61,7 @@ static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 void StartDefaultTask(void const * argument);
+void StartCommandTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -79,7 +81,6 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
-
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -127,6 +128,10 @@ int main(void)
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
+  /* definition and creation of commandTask */
+  osThreadDef(commandTask, StartCommandTask, osPriorityNormal, 0, 128);
+  commandTaskHandle = osThreadCreate(osThread(commandTask), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -135,7 +140,6 @@ int main(void)
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
-
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -358,7 +362,25 @@ __weak void StartDefaultTask(void const * argument)
   /* USER CODE END 5 */
 }
 
+/* USER CODE BEGIN Header_StartCommandTask */
 /**
+* @brief Function implementing the CommandTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartCommandTask */
+__weak void StartCommandTask(void const * argument)
+{
+  /* USER CODE BEGIN StartCommandTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartCommandTask */
+}
+
+ /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM2 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment

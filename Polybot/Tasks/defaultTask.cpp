@@ -49,14 +49,12 @@ void robot_inc_timer()
 		}
 	}
 }
-#define RX_SIZE 2
-extern uint8_t rx_buffer[];
 
 void StartDefaultTask(void const * argument)
 {
 
 
-	HAL_UART_Receive_IT(&huart2, rx_buffer, RX_SIZE);
+
 
 	/*
 		TCA9548A mux(hi2c1);
