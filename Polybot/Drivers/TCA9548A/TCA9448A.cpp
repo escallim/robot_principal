@@ -7,7 +7,7 @@
  *  @date May/24/2016
  */
 
-#include "TCA9548A.h"
+#include <Drivers/TCA9548A/TCA9548A.h>
 
 TCA9548A::TCA9548A( I2C_HandleTypeDef &hi2c, uint8_t i2c_address) : hi2c(hi2c), i2c_addr(i2c_address)
 {

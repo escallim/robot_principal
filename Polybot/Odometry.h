@@ -1,9 +1,9 @@
 #ifndef ODOMETRY_H
 #define ODOMETRY_H
 
+#include <Drivers/MCP233/MCP233.h>
 #include "main.h"
 
-#include "MCP233.h"
 
 class pos_t
 {

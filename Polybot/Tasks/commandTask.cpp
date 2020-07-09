@@ -118,7 +118,7 @@ void responseCommand(commandResponse_t *response)
 {
 
 }
-
+/*
 void StartCommandTask(void const * argument)
 {
 	commandTaskState_t state = INIT;
@@ -160,7 +160,7 @@ void StartCommandTask(void const * argument)
 		}
 	}
 }
-
+*/
 void GetCharFromIT(uint8_t c)
 {
 	if(c == STX || index >= SIZE_BUFFER)
